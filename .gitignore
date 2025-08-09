@@ -1,0 +1,15 @@
+.DS_Store
+#bot_brain.brn
+# Python cache & virtual environments
+__pycache__/
+*.pyc
+venv/
+
+# Model / AI data files
+*.pkl
+*.pt
+*.h5
+*.brn  # AIML brain file if you regenerate it on server
+
+# Environment / secrets
+.env

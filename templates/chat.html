@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Chat Assistant</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #4f46e5, #9333ea, #ec4899);
+            background-size: 300% 300%;
+            animation: gradientBG 8s ease infinite;
+            font-family: 'Poppins', sans-serif;
+            color: #fff;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .chat-wrapper {
+            max-width: 500px;
+            margin: 50px auto;
+        }
+        .chat-box {
+            backdrop-filter: blur(15px);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .chat-header {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            scrollbar-width: thin;
+        }
+        .user-msg {
+            text-align: right;
+            color: #4ade80;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+        }
+        .bot-msg {
+            text-align: left;
+            color: #fff;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+        }
+        .chat-input {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            display: flex;
+            gap: 8px;
+        }
+        .chat-input input {
+            flex: 1;
+            border-radius: 8px;
+            border: none;
+            padding: 10px;
+            outline: none;
+        }
+        .chat-input button {
+            border-radius: 8px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .chat-input button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(255,255,255,0.3);
+        }
+        .recording {
+            color: #f87171 !important;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { text-shadow: 0 0 5px #f87171; }
+            50% { text-shadow: 0 0 15px #f87171; }
+            100% { text-shadow: 0 0 5px #f87171; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-wrapper">
+    <div class="chat-box">
+        <div class="chat-header">
+            <i class="fa-solid fa-robot"></i> AI Chat Assistant
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+            <input type="text" id="messageText" placeholder="Type your message..." autofocus />
+            <button class="btn btn-success" id="sendBtn"><i class="fa-solid fa-paper-plane"></i></button>
+            <button class="btn btn-secondary" id="clearBtn"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn btn-warning" id="voiceBtn"><i class="fa-solid fa-microphone"></i></button>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://unpkg.com/speech-to-text@0.7.4/lib/index.js"></script>
+<script>
+$(function() {
+    const synth = window.speechSynthesis;
+    const msg = new SpeechSynthesisUtterance();
+
+    $("#sendBtn").click(() => sendMessage());
+    $("#clearBtn").click(() => $("#chatMessages").html(""));
+    $("#voiceBtn").click(startVoiceInput);
+
+    $("#messageText").keypress(function(e) {
+        if (e.which === 13) sendMessage();
+    });
+
+    function sendMessage() {
+        const message = $("#messageText").val().trim();
+        if (!message) return;
+
+        $("#chatMessages").append(`<div class="user-msg">${message}</div>`);
+        scrollToBottom();
+        
+        $.post("/ask", { messageText: message }, function(response) {
+            const answer = response.answer;
+            $("#chatMessages").append(`<div class="bot-msg">${answer}</div>`);
+            $("#messageText").val("");
+            scrollToBottom();
+
+            msg.text = answer;
+            synth.speak(msg);
+        });
+    }
+
+    function startVoiceInput() {
+    const micIcon = $("#voiceBtn i");
+    micIcon.addClass("recording");
+
+    if (!('webkitSpeechRecognition' in window)) {
+        alert("Sorry, your browser does not support speech recognition.");
+        micIcon.removeClass("recording");
+        return;
+    }
+
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.start();
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        $("#messageText").val(transcript);
+        sendMessage();
+    };
+
+    recognition.onerror = function(event) {
+        console.error("Speech recognition error:", event.error);
+    };
+
+    recognition.onend = function() {
+        micIcon.removeClass("recording");
+    };
+}
+
+
+    function scrollToBottom() {
+        const chatMessages = document.getElementById("chatMessages");
+        chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+    }
+});
+</script>
+
+</body>
+</html>
